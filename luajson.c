@@ -293,6 +293,8 @@ decode_value(lua_State *L, char **s, int null)
 		    	if (**s == 'e' || **s == 'E' || **s == '.')
 		    		isfloat = 1;
 #else
+		if (**s == '-')
+			(*s)++;
 		while (isdigit(**s)) {
 #endif
 			(*s)++;
