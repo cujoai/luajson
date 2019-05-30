@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 - 2018, CUJO LLC.
+ * Copyright (c) 2017-2019 CUJO LLC.
  * Copyright (c) 2011 - 2016, Micro Systems Marc Balmer, CH-5073 Gipf-Oberfrick
  * All rights reserved.
  *
