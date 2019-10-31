@@ -341,7 +341,8 @@ json_decode(lua_State *L)
 	null = luaL_checkoption(L, 2, "json-null", options);
 
 	decode_value(L, &s, null);
-	return 1;
+	lua_pushstring(L, s);
+	return 2;
 }
 
 /* encode JSON */
