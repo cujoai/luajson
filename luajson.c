@@ -503,7 +503,6 @@ encode(lua_State *L, luaL_Buffer *b, int arg)
 	default:
 		luaL_error(L, "Lua type %s is incompatible with JSON",
 		    luaL_typename(L, arg));
-		lua_remove(L, arg);
 	}
 }
 
