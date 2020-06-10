@@ -477,6 +477,11 @@ encode(lua_State *L, luaL_Buffer *b, int arg)
 			}
 			lua_insert(L, arg + 1); /* value */
 			lua_insert(L, arg + 1); /* key */
+			if (lua_type(L, arg + 1) != LUA_TSTRING) {
+				luaL_error(L, "Lua type %s is unsupported as object key",
+				    luaL_typename(L, arg + 1));
+				break;
+			}
 			luaL_addstring(b, n ? ",\"" : "{\"");
 			luaL_addstring(b, lua_tostring(L, arg + 1));
 			luaL_addstring(b, "\":");
