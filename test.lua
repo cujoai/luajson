@@ -1,6 +1,6 @@
 -- import the json module
 
-require('json')
+local json = require('json')
 
 local foo = json.decode([[
             {"name" : "lol", "age" : -1.5e+06, "foo" : ["bar", true, null]}
@@ -41,5 +41,6 @@ local foo2 = json.decode(str)
 
 print(json.encode(foo2)) -- {"name":"lol",age:-1500000,"foo":"omg :D"}
 print(json.encode(nil))
-print(json.encode(function () print('foo') end))
-print(json.encode())
+assert(pcall(json.encode, function () print('foo') end) == false)
+assert(pcall(json.encode) == false)
+assert(pcall(json.encode, {[false]=1}) == false)
