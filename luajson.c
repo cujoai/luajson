@@ -50,7 +50,7 @@
 
 static void decode_value(lua_State *, char **, int);
 static void decode_string(lua_State *, char **);
-static void encode(lua_State *, luaL_Buffer *, int);
+static void encode(lua_State *, luaL_Buffer *, int, int);
 
 static unsigned int
 digit2int(lua_State *L, const unsigned char digit)
@@ -419,7 +419,7 @@ encode_string(lua_State *L, luaL_Buffer *b, unsigned char *s)
 }
 
 static void
-encode(lua_State *L, luaL_Buffer *b, int arg)
+encode(lua_State *L, luaL_Buffer *b, int strict, int arg)
 {
 	int n;
 
@@ -459,7 +459,7 @@ encode(lua_State *L, luaL_Buffer *b, int arg)
 			}
 			lua_insert(L, arg + 1);
 			luaL_addchar(b, n ? ',' : '[');
-			encode(L, b, arg + 1);
+			encode(L, b, strict, arg + 1);
 		}
 		if (n) {
 			luaL_addchar(b, ']');
@@ -485,7 +485,7 @@ encode(lua_State *L, luaL_Buffer *b, int arg)
 			luaL_addstring(b, n ? ",\"" : "{\"");
 			luaL_addstring(b, lua_tostring(L, arg + 1));
 			luaL_addstring(b, "\":");
-			encode(L, b, arg + 2);
+			encode(L, b, strict, arg + 2);
 			lua_pushvalue(L, arg + 1); /* key */
 			lua_remove(L, arg + 1);
 			n++;
@@ -501,8 +501,16 @@ encode(lua_State *L, luaL_Buffer *b, int arg)
 		lua_remove(L, arg);
 		break;
 	default:
-		luaL_error(L, "Lua type %s is incompatible with JSON",
-		    luaL_typename(L, arg));
+		if (strict)
+			luaL_error(L, "Lua type %s is incompatible with JSON",
+			    luaL_typename(L, arg));
+		/* assumes nobody has quotes or backslashes in their __name */
+		luaL_addchar(b, '"');
+		luaL_tolstring(L, arg, NULL);
+		luaL_addvalue(b);
+		luaL_addchar(b, '"');
+		lua_remove(L, arg);
+		break;
 	}
 }
 
@@ -513,7 +521,19 @@ json_encode(lua_State *L)
 
 	luaL_checkany(L, 1);
 	luaL_buffinit(L, &b);
-	encode(L, &b, 1);
+	encode(L, &b, 1, 1);
+	luaL_pushresult(&b);
+	return 1;
+}
+
+static int
+json_encode_any(lua_State *L)
+{
+	luaL_Buffer b;
+
+	luaL_checkany(L, 1);
+	luaL_buffinit(L, &b);
+	encode(L, &b, 0, 1);
 	luaL_pushresult(&b);
 	return 1;
 }
@@ -563,6 +583,7 @@ luaopen_json(lua_State* L)
 	static const struct luaL_Reg methods[] = {
 		{ "decode",	json_decode },
 		{ "encode",	json_encode },
+		{ "encodeany",	json_encode_any },
 		{ "isnull",	json_isnull },
 		{ NULL,		NULL }
 	};
