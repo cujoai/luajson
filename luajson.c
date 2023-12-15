@@ -627,7 +627,7 @@ __exit modexit(void)
 module_init(modinit);
 module_exit(modexit);
 
-EXPORT_SYMBOL(luaopen_json);
+EXPORT_SYMBOL_GPL(luaopen_json);
 MODULE_LICENSE("Dual MIT/GPL");
 MODULE_AUTHOR("CUJO LLC <opensource@cujo.com>");
 #endif
