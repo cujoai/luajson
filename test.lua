@@ -44,3 +44,7 @@ print(json.encode(nil))
 assert(pcall(json.encode, function () print('foo') end) == false)
 assert(pcall(json.encode) == false)
 assert(pcall(json.encode, {[false]=1}) == false)
+
+local escape = debug.setmetatable(function() end, {__tostring = function() return '"' end})
+assert(json.encodeany(escape) == '"\\""')
+assert(json.decode(json.encodeany(escape)) == '"')

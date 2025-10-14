@@ -504,11 +504,8 @@ encode(lua_State *L, luaL_Buffer *b, int strict, int arg)
 		if (strict)
 			luaL_error(L, "Lua type %s is incompatible with JSON",
 			    luaL_typename(L, arg));
-		/* assumes nobody has quotes or backslashes in their __name */
-		luaL_addchar(b, '"');
-		luaL_tolstring(L, arg, NULL);
-		luaL_addvalue(b);
-		luaL_addchar(b, '"');
+		encode_string(L, b, (unsigned char *)luaL_tolstring(L, arg, NULL));
+		lua_pop(L, 1);
 		lua_remove(L, arg);
 		break;
 	}
