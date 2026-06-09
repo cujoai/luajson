@@ -423,6 +423,18 @@ encode(lua_State *L, luaL_Buffer *b, int strict, int arg)
 {
 	int n;
 
+	/* When recursing into tables, we grow the Lua stack by an unbounded
+	 * amount to keep track of where we are in each table's iteration loop.
+	 * But luaL_Buffer needs to put some values on the stack as well, and it
+	 * simply assumes there is enough room for doing so.
+	 *
+	 * The documentation doesn't tell us how much stack space luaL_Buffer
+	 * can need (only "a variable number of stack slots"). Reserve
+	 * LUA_MINSTACK at each level of recursion: We only use a few additional
+	 * slots here, leaving most of LUA_MINSTACK free, which should suffice.
+	 */
+	luaL_checkstack(L, LUA_MINSTACK, "JSON nesting too deep to encode");
+
 	switch (lua_type(L, arg)) {
 	case LUA_TBOOLEAN:
 		luaL_addstring(b, lua_toboolean(L, arg) ? "true" : "false");
@@ -439,7 +451,6 @@ encode(lua_State *L, luaL_Buffer *b, int strict, int arg)
 		break;
 	case LUA_TTABLE:
 		/* check if this is the null value */
-		luaL_checkstack(L, 2, "out of stack space");
 		if (lua_getmetatable(L, arg)) {
 			int equal;
 			luaL_getmetatable(L, JSON_NULL_METATABLE);
