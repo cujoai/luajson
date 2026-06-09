@@ -441,14 +441,15 @@ encode(lua_State *L, luaL_Buffer *b, int strict, int arg)
 		/* check if this is the null value */
 		luaL_checkstack(L, 2, "out of stack space");
 		if (lua_getmetatable(L, arg)) {
+			int equal;
 			luaL_getmetatable(L, JSON_NULL_METATABLE);
-			if (lua_compare(L, -2, -1, LUA_OPEQ)) {
-				lua_pop(L, 2);
+			equal = lua_compare(L, -2, -1, LUA_OPEQ);
+			lua_pop(L, 2);
+			if (equal) {
 				luaL_addstring(b, "null");
-				lua_pop(L, 1);
+				lua_remove(L, arg);
 				break;
 			}
-			lua_pop(L, 2);
 		}
 		/* if there are t[1] .. t[n], output them as array */
 		for (n = 0; ; n++) {
