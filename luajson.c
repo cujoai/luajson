@@ -501,14 +501,17 @@ encode(lua_State *L, luaL_Buffer *b, int strict, int arg)
 		luaL_addstring(b, "null");
 		lua_remove(L, arg);
 		break;
-	default:
+	default: {
+		const char *s;
 		if (strict)
 			luaL_error(L, "Lua type %s is incompatible with JSON",
 			    luaL_typename(L, arg));
-		encode_string(L, b, (unsigned char *)luaL_tolstring(L, arg, NULL));
-		lua_pop(L, 1);
+		s = luaL_tolstring(L, arg, NULL);
+		lua_replace(L, arg);
+		encode_string(L, b, (unsigned char *)s);
 		lua_remove(L, arg);
 		break;
+	}
 	}
 }
 

@@ -54,3 +54,8 @@ do
    for i = 1, 2000 do t[i] = json.null end
    print(#json.encode(t))
 end
+do
+   local t = {}
+   for i = 1, 1000 do t[i] = print end
+   print(#json.encodeany(t))
+end
