@@ -48,3 +48,24 @@ assert(pcall(json.encode, {[false]=1}) == false)
 local escape = debug.setmetatable(function() end, {__tostring = function() return '"' end})
 assert(json.encodeany(escape) == '"\\""')
 assert(json.decode(json.encodeany(escape)) == '"')
+
+do
+   local t = {}
+   for i = 1, 2000 do t[i] = json.null end
+   print(#json.encode(t))
+end
+do
+   local t = {}
+   for i = 1, 1000 do t[i] = print end
+   print(#json.encodeany(t))
+end
+do
+   local node = string.rep('x', 9000)
+   for i = 1, 25 do node = { node } end
+   print(#json.encode(node))
+end
+do
+   local node = string.rep('x', 9000)
+   for i = 1, 25 do node = { k = node } end
+   print(#json.encode(node))
+end
