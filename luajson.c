@@ -230,6 +230,8 @@ decode_string(lua_State *L, char **s)
 				(*s) += 2;
 				break;
 			case 'u': {
+				if (end - *s < 6)
+					luaL_error(L, "truncated \\u escape");
 				size_t len = code2utf8(L, (unsigned char *)(*s) + 2, utfbuf);
 				luaL_addlstring(&b, utfbuf, len);
 				(*s) += 6;
