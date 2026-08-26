@@ -59,9 +59,9 @@ digit2int(lua_State *L, const unsigned char digit)
 
 	if (digit >= '0' && digit <= '9')
 		val = digit - '0';
-	else if (digit >= 'a' || digit <= 'f')
+	else if (digit >= 'a' && digit <= 'f')
 		val = digit - 'a' + 10;
-	else if (digit >= 'A' || digit <= 'F')
+	else if (digit >= 'A' && digit <= 'F')
 		val = digit - 'A' + 10;
 	else
 		luaL_error(L, "Invalid hex digit");

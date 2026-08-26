@@ -49,6 +49,9 @@ local escape = debug.setmetatable(function() end, {__tostring = function() retur
 assert(json.encodeany(escape) == '"\\""')
 assert(json.decode(json.encodeany(escape)) == '"')
 
+assert(json.decode('"\\u00AA"') == '\xc2\xaa')
+assert(pcall(json.decode, '"\\u00G0"') == false)
+
 do
    local t = {}
    for i = 1, 2000 do t[i] = json.null end
