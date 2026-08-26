@@ -366,7 +366,11 @@ encode_utf8_codepoint(lua_State *L, luaL_Buffer *b, unsigned char *s,
 	 */
 	char hexbuf[6];
 
-	if ((*s & 0x80) == 0)
+	if (*s < 0x20) {
+		luaL_addstring(b, "\\u");
+		snprintf(hexbuf, sizeof hexbuf, "%04x", *s);
+		luaL_addstring(b, hexbuf);
+	} else if ((*s & 0x80) == 0)
 		luaL_addchar(b, *s);
 	else if (*s >= 0xc2 && *s <= 0xdf) {
 		if (end - s < 2 || !is_utf8_continuation(s + 1)) {
