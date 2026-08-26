@@ -393,6 +393,7 @@ encode_utf8_codepoint(lua_State *L, luaL_Buffer *b, unsigned char *s,
 		luaL_addstring(b, hexbuf);
 		s += 2;
 	} else if (((*s >> 3) & 0x1f) == 0x1e) {
+		unsigned int utf;
 		if (end - s < 4
 		    || !is_utf8_continuation(s + 1)
 		    || !is_utf8_continuation(s + 2)
@@ -400,12 +401,20 @@ encode_utf8_codepoint(lua_State *L, luaL_Buffer *b, unsigned char *s,
 			luaL_addchar(b, *s);
 			return s;
 		}
+		utf = ((*s & 0x07) << 18) |
+		      ((*(s + 1) & 0x3f) << 12) |
+		      ((*(s + 2) & 0x3f) << 6) |
+		      (*(s + 3) & 0x3f);
+		/* JSON only supports 4-hexdigit \u escapes, so
+		 * emit a UTF-16 surrogate pair */
+		utf -= 0x10000;
 		luaL_addstring(b, "\\u");
 		snprintf(hexbuf, sizeof hexbuf, "%04x",
-			 ((*s & 0x07) << 18) |
-			 ((*(s + 1) & 0x3f) << 12) |
-			 ((*(s + 2) & 0x3f) << 6) |
-			 (*(s + 3) & 0x3f));
+			 (0xd800 | (utf >> 10 & 0x3ff)));
+		luaL_addstring(b, hexbuf);
+		luaL_addstring(b, "\\u");
+		snprintf(hexbuf, sizeof hexbuf, "%04x",
+			 0xdc00 | (utf & 0x3ff));
 		luaL_addstring(b, hexbuf);
 		s += 3;
 	}

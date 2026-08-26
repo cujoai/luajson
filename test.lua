@@ -58,6 +58,8 @@ assert(pcall(json.decode, '"\\ux"') == false)
 
 assert(json.encode('\xc2\xaa') == '"\\u00aa"')
 assert(json.encode('\xe2\x82\xac') == '"\\u20ac"')
+assert(json.encode('\xf0\x9f\x98\x80') == '"\\ud83d\\ude00"')
+assert(json.encode('\xf4\x8f\xbf\xbf') == '"\\udbff\\udfff"')
 assert(json.encode('\xf0') == '"\xf0"')
 assert(json.encode('\xe2') == '"\xe2"')
 assert(json.encode('\xc2') == '"\xc2"')
