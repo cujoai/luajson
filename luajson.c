@@ -348,8 +348,15 @@ json_decode(lua_State *L)
 
 /* encode JSON */
 
+static int
+is_utf8_continuation(const unsigned char *c)
+{
+	return (*c & 0xc0) == 0x80;
+}
+
 static unsigned char *
-encode_utf8_codepoint(lua_State *L, luaL_Buffer *b, unsigned char *s)
+encode_utf8_codepoint(lua_State *L, luaL_Buffer *b, unsigned char *s,
+                      const unsigned char *end)
 {
 	/* Convert UTF-8 to unicode
 	 * 00000000 - 0000007F: 0xxxxxxx
@@ -362,12 +369,22 @@ encode_utf8_codepoint(lua_State *L, luaL_Buffer *b, unsigned char *s)
 	if ((*s & 0x80) == 0)
 		luaL_addchar(b, *s);
 	else if (((*s >> 5) & 0x07) == 0x06) {
+		if (end - s < 2 || !is_utf8_continuation(s + 1)) {
+			luaL_addchar(b, *s);
+			return s;
+		}
 		luaL_addstring(b, "\\u");
 		snprintf(hexbuf, sizeof hexbuf, "%04x",
 			 ((*s & 0x1f) << 6) | (*(s + 1) & 0x3f));
 		luaL_addstring(b, hexbuf);
 		s++;
 	} else if (((*s >> 4) & 0x0f) == 0x0e) {
+		if (end - s < 3
+		    || !is_utf8_continuation(s + 1)
+		    || !is_utf8_continuation(s + 2)) {
+			luaL_addchar(b, *s);
+			return s;
+		}
 		luaL_addstring(b, "\\u");
 		snprintf(hexbuf, sizeof hexbuf, "%04x",
 			 ((*s & 0x0f) << 12) |
@@ -376,6 +393,13 @@ encode_utf8_codepoint(lua_State *L, luaL_Buffer *b, unsigned char *s)
 		luaL_addstring(b, hexbuf);
 		s += 2;
 	} else if (((*s >> 3) & 0x1f) == 0x1e) {
+		if (end - s < 4
+		    || !is_utf8_continuation(s + 1)
+		    || !is_utf8_continuation(s + 2)
+		    || !is_utf8_continuation(s + 3)) {
+			luaL_addchar(b, *s);
+			return s;
+		}
 		luaL_addstring(b, "\\u");
 		snprintf(hexbuf, sizeof hexbuf, "%04x",
 			 ((*s & 0x07) << 18) |
@@ -390,10 +414,12 @@ encode_utf8_codepoint(lua_State *L, luaL_Buffer *b, unsigned char *s)
 
 /* encode_string assumes an UTF-8 string */
 static void
-encode_string(lua_State *L, luaL_Buffer *b, unsigned char *s)
+encode_string(lua_State *L, luaL_Buffer *b, unsigned char *s, size_t len)
 {
+	const unsigned char *end = s + len;
+
 	luaL_addchar(b, '"');
-	for (; *s; s++) {
+	for (; s < end; s++) {
 		switch (*s) {
 		case '\\':
 			luaL_addstring(b, "\\\\");
@@ -417,7 +443,7 @@ encode_string(lua_State *L, luaL_Buffer *b, unsigned char *s)
 			luaL_addstring(b, "\\t");
 			break;
 		default:
-			s = encode_utf8_codepoint(L, b, s);
+			s = encode_utf8_codepoint(L, b, s, end);
 			break;
 		}
 	}
@@ -451,10 +477,13 @@ encode(lua_State *L, luaL_Buffer *b, int strict, int arg)
 		luaL_addvalue(b);
 		lua_remove(L, arg);
 		break;
-	case LUA_TSTRING:
-		encode_string(L, b, (unsigned char *)lua_tostring(L, arg));
+	case LUA_TSTRING: {
+		size_t slen;
+		const char *s = lua_tolstring(L, arg, &slen);
+		encode_string(L, b, (unsigned char *)s, slen);
 		lua_remove(L, arg);
 		break;
+	}
 	case LUA_TTABLE:
 		/* check if this is the null value */
 		if (lua_getmetatable(L, arg)) {
@@ -520,12 +549,13 @@ encode(lua_State *L, luaL_Buffer *b, int strict, int arg)
 		break;
 	default: {
 		const char *s;
+		size_t slen;
 		if (strict)
 			luaL_error(L, "Lua type %s is incompatible with JSON",
 			    luaL_typename(L, arg));
-		s = luaL_tolstring(L, arg, NULL);
+		s = luaL_tolstring(L, arg, &slen);
 		lua_replace(L, arg);
-		encode_string(L, b, (unsigned char *)s);
+		encode_string(L, b, (unsigned char *)s, slen);
 		lua_remove(L, arg);
 		break;
 	}

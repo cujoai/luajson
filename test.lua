@@ -56,6 +56,13 @@ assert(pcall(json.decode, '"\\u123"') == false)
 assert(pcall(json.decode, '"\\u"') == false)
 assert(pcall(json.decode, '"\\ux"') == false)
 
+assert(json.encode('\xc2\xaa') == '"\\u00aa"')
+assert(json.encode('\xe2\x82\xac') == '"\\u20ac"')
+assert(json.encode('\xf0') == '"\xf0"')
+assert(json.encode('\xe2') == '"\xe2"')
+assert(json.encode('\xc2') == '"\xc2"')
+assert(json.encode('\xc3a') == '"\xc3a"')
+
 do
    local t = {}
    for i = 1, 2000 do t[i] = json.null end
