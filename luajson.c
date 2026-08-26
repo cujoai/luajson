@@ -368,7 +368,7 @@ encode_utf8_codepoint(lua_State *L, luaL_Buffer *b, unsigned char *s,
 
 	if ((*s & 0x80) == 0)
 		luaL_addchar(b, *s);
-	else if (((*s >> 5) & 0x07) == 0x06) {
+	else if (*s >= 0xc2 && *s <= 0xdf) {
 		if (end - s < 2 || !is_utf8_continuation(s + 1)) {
 			luaL_addchar(b, *s);
 			return s;
@@ -378,10 +378,12 @@ encode_utf8_codepoint(lua_State *L, luaL_Buffer *b, unsigned char *s,
 			 ((*s & 0x1f) << 6) | (*(s + 1) & 0x3f));
 		luaL_addstring(b, hexbuf);
 		s++;
-	} else if (((*s >> 4) & 0x0f) == 0x0e) {
+	} else if (*s >= 0xe0 && *s <= 0xef) {
 		if (end - s < 3
 		    || !is_utf8_continuation(s + 1)
-		    || !is_utf8_continuation(s + 2)) {
+		    || !is_utf8_continuation(s + 2)
+		    || (*s == 0xe0 && *(s + 1) < 0xa0)
+		    || (*s == 0xed && *(s + 1) > 0x9f)) {
 			luaL_addchar(b, *s);
 			return s;
 		}
@@ -392,12 +394,14 @@ encode_utf8_codepoint(lua_State *L, luaL_Buffer *b, unsigned char *s,
 			 (*(s + 2) & 0x3f));
 		luaL_addstring(b, hexbuf);
 		s += 2;
-	} else if (((*s >> 3) & 0x1f) == 0x1e) {
+	} else if (*s >= 0xF0 && *s <= 0xF4) {
 		unsigned int utf;
 		if (end - s < 4
 		    || !is_utf8_continuation(s + 1)
 		    || !is_utf8_continuation(s + 2)
-		    || !is_utf8_continuation(s + 3)) {
+		    || !is_utf8_continuation(s + 3)
+		    || (*s == 0xf0 && *(s + 1) < 0x90)
+		    || (*s == 0xf4 && *(s + 1) > 0x8f)) {
 			luaL_addchar(b, *s);
 			return s;
 		}
@@ -417,11 +421,14 @@ encode_utf8_codepoint(lua_State *L, luaL_Buffer *b, unsigned char *s,
 			 0xdc00 | (utf & 0x3ff));
 		luaL_addstring(b, hexbuf);
 		s += 3;
-	}
+	} else
+		luaL_addchar(b, *s);
 	return s;
 }
 
-/* encode_string assumes an UTF-8 string */
+/* encode_string expects a UTF-8 string
+ *
+ * bytes not part of a valid sequence are copied through unchanged */
 static void
 encode_string(lua_State *L, luaL_Buffer *b, unsigned char *s, size_t len)
 {

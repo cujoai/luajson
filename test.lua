@@ -64,6 +64,10 @@ assert(json.encode('\xf0') == '"\xf0"')
 assert(json.encode('\xe2') == '"\xe2"')
 assert(json.encode('\xc2') == '"\xc2"')
 assert(json.encode('\xc3a') == '"\xc3a"')
+assert(json.encode('\x80\xf8') == '"\x80\xf8"')
+assert(json.encode('\xc0\x80') == '"\xc0\x80"')
+assert(json.encode('\xed\xa0\x80') == '"\xed\xa0\x80"')
+assert(json.encode('\xf4\x90\x80\x80') == '"\xf4\x90\x80\x80"')
 
 do
    local t = {}
