@@ -51,6 +51,7 @@ assert(json.decode(json.encodeany(escape)) == '"')
 
 assert(json.decode('"\\u00AA"') == '\xc2\xaa')
 assert(pcall(json.decode, '"\\u00G0"') == false)
+assert(json.decode('"a\\u0000b"') == 'a\0b')
 
 do
    local t = {}

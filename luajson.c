@@ -80,7 +80,7 @@ fourhex2int(lua_State *L, const unsigned char *code)
 	return utf;
 }
 
-static const char *
+static size_t
 code2utf8(lua_State *L, const unsigned char *code, char buf[4])
 {
 	unsigned int utf = 0;
@@ -88,20 +88,19 @@ code2utf8(lua_State *L, const unsigned char *code, char buf[4])
 	utf = fourhex2int(L, code);
 	if (utf < 128) {
 		buf[0] = utf & 0x7F;
-		buf[1] = buf[2] = buf[3] = 0;
+		return 1;
 	} else if (utf < 2048) {
 		buf[0] = ((utf >> 6) & 0x1F) | 0xC0;
 		buf[1] = (utf & 0x3F) | 0x80;
-		buf[2] = buf[3] = 0;
+		return 2;
 	} else if (utf < 65536) {
 		buf[0] = ((utf >> 12) & 0x0F) | 0xE0;
 		buf[1] = ((utf >> 6) & 0x3F) | 0x80;
 		buf[2] = (utf & 0x3F) | 0x80;
-		buf[3] = 0;
+		return 3;
 	} else {
 		luaL_error(L, "unreachable codepoint");
 	}
-	return buf;
 }
 
 static void
@@ -230,11 +229,12 @@ decode_string(lua_State *L, char **s)
 				luaL_addchar(&b, '\t');
 				(*s) += 2;
 				break;
-			case 'u':
-				code2utf8(L, (unsigned char *)(*s) + 2, utfbuf);
-				luaL_addstring(&b, utfbuf);
+			case 'u': {
+				size_t len = code2utf8(L, (unsigned char *)(*s) + 2, utfbuf);
+				luaL_addlstring(&b, utfbuf, len);
 				(*s) += 6;
 				break;
+			}
 			default:
 				luaL_error(L, "invalid escape character");
 				break;
