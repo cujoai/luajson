@@ -99,10 +99,7 @@ code2utf8(lua_State *L, const unsigned char *code, char buf[4])
 		buf[2] = (utf & 0x3F) | 0x80;
 		buf[3] = 0;
 	} else {
-		buf[0] = ((utf >> 18) & 0x07) | 0xF0;
-		buf[1] = ((utf >> 12) & 0x3F) | 0x80;
-		buf[2] = ((utf >> 6) & 0x3F) | 0x80;
-		buf[3] = (utf & 0x3F) | 0x80;
+		luaL_error(L, "unreachable codepoint");
 	}
 	return buf;
 }
