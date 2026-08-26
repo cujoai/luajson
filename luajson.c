@@ -349,12 +349,50 @@ json_decode(lua_State *L)
 
 /* encode JSON */
 
+static unsigned char *
+encode_utf8_codepoint(lua_State *L, luaL_Buffer *b, unsigned char *s)
+{
+	/* Convert UTF-8 to unicode
+	 * 00000000 - 0000007F: 0xxxxxxx
+	 * 00000080 - 000007FF: 110xxxxx 10xxxxxx
+	 * 00000800 - 0000FFFF: 1110xxxx 10xxxxxx 10xxxxxx
+	 * 00010000 - 001FFFFF: 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+	 */
+	char hexbuf[6];
+
+	if ((*s & 0x80) == 0)
+		luaL_addchar(b, *s);
+	else if (((*s >> 5) & 0x07) == 0x06) {
+		luaL_addstring(b, "\\u");
+		snprintf(hexbuf, sizeof hexbuf, "%04x",
+			 ((*s & 0x1f) << 6) | (*(s + 1) & 0x3f));
+		luaL_addstring(b, hexbuf);
+		s++;
+	} else if (((*s >> 4) & 0x0f) == 0x0e) {
+		luaL_addstring(b, "\\u");
+		snprintf(hexbuf, sizeof hexbuf, "%04x",
+			 ((*s & 0x0f) << 12) |
+			 ((*(s + 1) & 0x3f) << 6) |
+			 (*(s + 2) & 0x3f));
+		luaL_addstring(b, hexbuf);
+		s += 2;
+	} else if (((*s >> 3) & 0x1f) == 0x1e) {
+		luaL_addstring(b, "\\u");
+		snprintf(hexbuf, sizeof hexbuf, "%04x",
+			 ((*s & 0x07) << 18) |
+			 ((*(s + 1) & 0x3f) << 12) |
+			 ((*(s + 2) & 0x3f) << 6) |
+			 (*(s + 3) & 0x3f));
+		luaL_addstring(b, hexbuf);
+		s += 3;
+	}
+	return s;
+}
+
 /* encode_string assumes an UTF-8 string */
 static void
 encode_string(lua_State *L, luaL_Buffer *b, unsigned char *s)
 {
-	char hexbuf[6];
-
 	luaL_addchar(b, '"');
 	for (; *s; s++) {
 		switch (*s) {
@@ -380,38 +418,7 @@ encode_string(lua_State *L, luaL_Buffer *b, unsigned char *s)
 			luaL_addstring(b, "\\t");
 			break;
 		default:
-		/* Convert UTF-8 to unicode
-		 * 00000000 - 0000007F: 0xxxxxxx
-		 * 00000080 - 000007FF: 110xxxxx 10xxxxxx
-		 * 00000800 - 0000FFFF: 1110xxxx 10xxxxxx 10xxxxxx
-		 * 00010000 - 001FFFFF: 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
-		 */
-			if ((*s & 0x80) == 0)
-				luaL_addchar(b, *s);
-			else if (((*s >> 5) & 0x07) == 0x06) {
-				luaL_addstring(b, "\\u");
-				snprintf(hexbuf, sizeof hexbuf, "%04x",
-				    ((*s & 0x1f) << 6) | (*(s + 1) & 0x3f));
-				luaL_addstring(b, hexbuf);
-				s++;
-			} else if (((*s >> 4) & 0x0f) == 0x0e) {
-				luaL_addstring(b, "\\u");
-				snprintf(hexbuf, sizeof hexbuf, "%04x",
-				    ((*s & 0x0f) << 12) |
-				    ((*(s + 1) & 0x3f) << 6) |
-				    (*(s + 2) & 0x3f));
-				luaL_addstring(b, hexbuf);
-				s += 2;
-			} else if (((*s >> 3) & 0x1f) == 0x1e) {
-				luaL_addstring(b, "\\u");
-				snprintf(hexbuf, sizeof hexbuf, "%04x",
-				    ((*s & 0x07) << 18) |
-				    ((*(s + 1) & 0x3f) << 12) |
-				    ((*(s + 2) & 0x3f) << 6) |
-				    (*(s + 3) & 0x3f));
-				luaL_addstring(b, hexbuf);
-				s += 3;
-			}
+			s = encode_utf8_codepoint(L, b, s);
 			break;
 		}
 	}
