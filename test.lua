@@ -49,6 +49,27 @@ local escape = debug.setmetatable(function() end, {__tostring = function() retur
 assert(json.encodeany(escape) == '"\\""')
 assert(json.decode(json.encodeany(escape)) == '"')
 
+assert(json.decode('"\\u00AA"') == '\xc2\xaa')
+assert(pcall(json.decode, '"\\u00G0"') == false)
+assert(json.decode('"a\\u0000b"') == 'a\0b')
+assert(pcall(json.decode, '"\\u123"') == false)
+assert(pcall(json.decode, '"\\u"') == false)
+assert(pcall(json.decode, '"\\ux"') == false)
+
+assert(json.encode('\xc2\xaa') == '"\\u00aa"')
+assert(json.encode('\xe2\x82\xac') == '"\\u20ac"')
+assert(json.encode('\xf0\x9f\x98\x80') == '"\\ud83d\\ude00"')
+assert(json.encode('\xf4\x8f\xbf\xbf') == '"\\udbff\\udfff"')
+assert(json.encode('\xf0') == '"\xf0"')
+assert(json.encode('\xe2') == '"\xe2"')
+assert(json.encode('\xc2') == '"\xc2"')
+assert(json.encode('\xc3a') == '"\xc3a"')
+assert(json.encode('\x80\xf8') == '"\x80\xf8"')
+assert(json.encode('\xc0\x80') == '"\xc0\x80"')
+assert(json.encode('\xed\xa0\x80') == '"\xed\xa0\x80"')
+assert(json.encode('\xf4\x90\x80\x80') == '"\xf4\x90\x80\x80"')
+assert(json.encode('a\0\1\x1fb') == '"a\\u0000\\u0001\\u001fb"')
+
 do
    local t = {}
    for i = 1, 2000 do t[i] = json.null end
